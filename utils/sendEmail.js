@@ -1,8 +1,8 @@
-const sendEmail = async (req, res) => {
-	const { email, emailTitle, text, html } = req.body;
+const sgMail = require("@sendgrid/mail");
 
+const sendEmail = async ({ email, emailTitle, text, html }) => {
 	sgMail.setApiKey(process.env.SENDGRID_API_KEY);
-
+	// const { email, emailTitle, text, html } = req.body;
 	const msg = {
 		to: `${email}`,
 		from: "micheltt.dev@gmail.com",
@@ -22,7 +22,7 @@ const sendEmail = async (req, res) => {
 
 	const info = await sgMail.send(msg);
 
-	res.status(200).json({ message: "Email sent", info });
+	return info;
 };
 
 module.exports = sendEmail;
