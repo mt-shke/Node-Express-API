@@ -18,6 +18,24 @@ const UserSchema = new mongoose.Schema(
 			required: [true, "Please enter a valid password"],
 			minlength: 6,
 		},
+		fullname: {
+			type: String,
+			required: [true, "Please enter your fullname"],
+			minlength: 1,
+			maxlength: 30,
+		},
+		username: {
+			type: String,
+			required: [true, "Please enter a valid username"],
+			minlength: 6,
+			maxlength: 20,
+			unique: [true, "This username is already registered"],
+		},
+		image: {
+			type: String,
+			required: false,
+			default: "/assets/user-images/image-example.svg",
+		},
 		role: {
 			type: String,
 			enum: ["admin", "user"],
@@ -51,6 +69,6 @@ UserSchema.methods.comparePassword = async function (enteredPassword) {
 	return await bcrypt.compare(enteredPassword, this.password);
 };
 
-const UserModel = mongoose.model("User", UserSchema);
+const UserModel = new mongoose.model("User", UserSchema);
 
 module.exports = UserModel;

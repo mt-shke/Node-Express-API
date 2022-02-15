@@ -13,16 +13,12 @@ const TokenModel = require("../models/token.model");
 
 // Register new account
 const register = async (req, res) => {
-	const { email, password, role } = req.body;
-	if (!email || !password) {
-		throw new CustomError.BadRequestError("Please enter a valid email and password");
+	const { email, password, fullname, username, image } = req.body;
+	if (!email || !password || !fullname || !username) {
+		throw new CustomError.BadRequestError("Requiered fields missing");
 	}
-
 	const user = await UserModel.findOne({ email });
 	if (user) {
-		throw new CustomError.BadRequestError("This email is already in use");
-	}
-	if (user && user.isVerified === false) {
 		throw new CustomError.BadRequestError("This email is already in use");
 	}
 
@@ -32,6 +28,9 @@ const register = async (req, res) => {
 	const newUser = await UserModel.create({
 		email,
 		password,
+		fullname,
+		username,
+		image,
 		verificationToken,
 		role: isFirstAccount ? "admin" : "user",
 	});
@@ -51,7 +50,7 @@ const verifyEmail = async (req, res) => {
 
 	const user = await UserModel.findOne({ email });
 	if (user.verificationToken !== verificationToken) {
-		throw new CustomError.BadRequestError("Token invalid");
+		throw new CustomError.UnauthenticatedError("Token invalid");
 	}
 
 	user.verificationToken = "";
@@ -72,16 +71,16 @@ const login = async (req, res) => {
 	const user = await UserModel.findOne({ email });
 	if (!user) {
 		// Email is not in DB
-		throw new CustomError.BadRequestError("Please enter a valid email and password");
+		throw new CustomError.UnauthenticatedError("Please enter a valid email and password");
 	}
 	if (!user.isVerified) {
-		// Email exist in DB but user did not verified its account yet
-		throw new CustomError.BadRequestError("Please validate your account");
+		// Email exist in DB but user did not verify its account yet
+		throw new CustomError.UnauthenticatedError("Please validate your account");
 	}
 
 	const passwordMatch = await user.comparePassword(password);
 	if (!passwordMatch) {
-		throw new CustomError.BadRequestError("Password invalid");
+		throw new CustomError.UnauthenticatedError("Password invalid");
 	}
 
 	const tokenUser = createToken(user);
@@ -93,11 +92,12 @@ const login = async (req, res) => {
 	if (existingToken) {
 		const { isValid } = existingToken;
 		if (!isValid) {
+			// true by default, but if user does unauthorized action, can be turned false
 			throw new CustomError.UnauthenticatedError("Token is invalid");
 		}
 
 		refreshToken = existingToken.refreshToken;
-		attachCookiesToResponse({ res, user, refreshToken });
+		attachCookiesToResponse({ res, user: tokenUser, refreshToken });
 		res.status(StatusCodes.OK).json({ user: tokenUser });
 		return;
 	}
@@ -115,7 +115,6 @@ const login = async (req, res) => {
 
 // Logout function
 const logout = async (req, res) => {
-	console.log("authC - logout", req.user);
 	await TokenModel.findOneAndDelete({ user: req.user.userId });
 	removeCookies({ res });
 	res.status(StatusCodes.OK).json({ message: "User now logged out!" });

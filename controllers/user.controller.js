@@ -1,6 +1,7 @@
 const { StatusCodes } = require("http-status-codes");
 const CustomError = require("../errors");
 const UserModel = require("../models/user.model");
+const crypto = require("crypto");
 
 const getAllUsers = async (req, res) => {
 	const users = await UserModel.find({});
@@ -54,16 +55,108 @@ const deleteUser = async (req, res) => {
 	const user = await UserModel.findOne({ _id: userId });
 	if (!user) {
 		// No user found with this email
-		throw new CustomError.BadRequestError("Invalid request");
+		throw new CustomError.UnauthenticatedError("Invalid request");
 	}
 
 	const passwordMatch = await user.comparePassword(password);
 	if (!passwordMatch) {
-		throw new CustomError.BadRequestError("Invalid credentials");
+		throw new CustomError.UnauthenticatedError("Invalid credentials");
 	}
 
 	user.remove();
 	res.status(StatusCodes.OK).json({ message: "User deleted" });
 };
 
-module.exports = { getAllUsers, getSingleUser, updateUser, deleteUser };
+const createDummyUser = async (req, res) => {
+	const admin = req.user.role;
+	if (!admin) {
+		throw new CustomError.UnauthorizedError("You cannot access this route");
+	}
+
+	// CreateSingleUser
+	// const newUser = await UserModel.create({
+	// 	email,
+	// 	password: crypto.randomBytes(30).toString("hex"),
+	// 	fullname,
+	// 	username,
+	// 	image,
+	// 	verificationToken: "",
+	// 	isVerified: true,
+	// 	verified: new Date(Date.now()),
+	// 	role: "user",
+	// });
+
+	const newUsersPromise = req.body.map(async (user) => {
+		return await UserModel.create({
+			email: `${crypto.randomBytes(5).toString("hex")}@gmail.com`,
+			password: crypto.randomBytes(30).toString("hex"),
+			fullname: user.fullname,
+			username: user.username,
+			image: user.image,
+			verificationToken: "",
+			isVerified: true,
+			verified: new Date(Date.now()),
+			role: "user",
+		});
+	});
+
+	const createdMultipleDummyUsers = await Promise.all([...newUsersPromise]);
+
+	res
+		.status(StatusCodes.CREATED)
+		.json({ success: true, message: "User Created!", createdMultipleDummyUsers });
+};
+
+module.exports = { getAllUsers, getSingleUser, updateUser, deleteUser, createDummyUser };
+
+// const usersJson = [
+// 	{"image": "/assets/user-images/image-zena.jpg",
+// 		"fullname": "Zena Kelley",
+// 		"username": "velvetround"
+// 	},
+// 	{"image": "/assets/user-images/image-suzanne.jpg",
+// 		"fullname": "Suzanne Chang",
+// 		"username": "upbeat1811"
+// 	},
+// 	{"image": "/assets/user-images/image-thomas.jpg",
+// 		"fullname": "Thomas Hood",
+// 		"username": "brawnybrave"
+// 	},
+// 	{"image": "/assets/user-images/image-elijah.jpg",
+// 		"fullname": "Elijah Moss",
+// 		"username": "hexagon.bestagon"
+// 	},
+// 	{"image": "/assets/user-images/image-james.jpg",
+// 		"fullname": "James Skinner",
+// 		"username": "hummingbird1"
+// 	},
+// 	{"image": "/assets/user-images/image-anne.jpg",
+// 		"fullname": "Anne Valentine",
+// 		"username": "annev1990"
+// 	},
+// 	{"image": "/assets/user-images/image-ryan.jpg",
+// 		"fullname": "Ryan Welles",
+// 		"username": "voyager.344"
+// 	},
+// 	{"image": "/assets/user-images/image-george.jpg",
+// 		"fullname": "George Partridge",
+// 		"username": "soccerviewer8"
+// 	},
+// 	{"image": "/assets/user-images/image-javier.jpg",
+// 		"fullname": "Javier Pollard",
+// 		"username": "warlikeduke"
+// 	},
+// 	{"image": "/assets/user-images/image-roxanne.jpg",
+// 		"fullname": "Roxanne Travis",
+// 		"username": "peppersprime32"
+// 	},
+// 	{"image": "/assets/user-images/image-victoria.jpg",
+// 		"fullname": "Victoria Mejia",
+// 		"username": "arlen_the_marlin"
+// 	},
+
+// 	{"image": "/assets/user-images/image-jackson.jpg",
+// 		"fullname": "Jackson Barker",
+// 		"username": "countryspirit"
+// 	}
+// ];
