@@ -8,10 +8,11 @@ const UserModel = require("../models/user.model");
 // Comments
 const postComment = async (req, res) => {
 	const { content, productRequest, comment } = req.body;
-	if (!content && !productRequestId) {
+	if (!content && !productRequest) {
 		throw new CustomError.BadRequestError("Content and ProductRequestId missing");
 	}
 	if (comment) {
+		// if comment this is a response to a comment
 		const newComment = await CommentModel.create({
 			content,
 			user: req.user.userId,
@@ -22,18 +23,21 @@ const postComment = async (req, res) => {
 		return;
 	}
 
+	// if !comment this is a direct response to a productRequest
+
 	const newComment = await CommentModel.create({
 		content,
 		user: req.user.userId,
 		productRequest: productRequest,
 	});
+
 	res.status(StatusCodes.CREATED).json({ success: true, message: "Comment created!", newComment });
 };
 
 const updateComment = async (req, res) => {
-	const id = req.params.id;
+	const { commentId } = req.params;
 	const { content } = req.body;
-	const comment = await CommentModel.findOne({ _id: id });
+	const comment = await CommentModel.findOne({ _id: { commentId } });
 	if (!comment) {
 		throw new CustomError.BadRequestError("Comment not found");
 	}
@@ -43,12 +47,12 @@ const updateComment = async (req, res) => {
 };
 
 const deleteComment = async (req, res) => {
-	const id = req.params.id;
-	const comment = await CommentModel.findOne({ _id: id });
+	const { commentId } = req.params;
+	const comment = await CommentModel.findOne({ _id: commentId });
 	if (!comment) {
 		throw new CustomError.BadRequestError("Comment not found");
 	}
-	if (req.user.userId === comment.user || req.user.role === "admin") {
+	if (req.user.userId === comment.user.toString() || req.user.role === "admin") {
 		comment.remove();
 		return res.status(StatusCodes.OK).json({ success: true, message: "Comment deleted!" });
 	}
@@ -104,9 +108,9 @@ const createReplies = async (comment) => {
 		throw new CustomError.BadRequestError("No user found");
 	}
 	return await CommentModel.create({
-		content: comment.content,
 		user: user._id,
 		productRequest: comment.productRequest,
+		content: comment.content,
 		comment: comment.comment,
 	});
 };

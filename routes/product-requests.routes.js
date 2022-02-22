@@ -7,6 +7,7 @@ const {
 	updateProductRequest,
 	deleteProductRequest,
 	createMultipleDummyRequests,
+	setUpvote,
 } = require("../controllers/productRequest.controller");
 const {
 	postComment,
@@ -19,7 +20,7 @@ const {
 router
 	.route("/")
 	.get(getAllProductRequests)
-	.post([authenticateUser, authorizePermissions("user")], createProductRequest);
+	.post([authenticateUser, authorizePermissions("user", "admin")], createProductRequest);
 
 // Original Dummy FE data
 router
@@ -32,16 +33,21 @@ router
 	.route("/create-multiple-replies")
 	.post([authenticateUser, authorizePermissions("admin")], createMultipleReplies);
 
+// Unique product request
 router
 	.route("/:productRequestId")
 	.get(getSingleProductRequest)
-	.patch([authenticateUser, authorizePermissions("user")], updateProductRequest)
-	.delete([authenticateUser, authorizePermissions("user")], deleteProductRequest);
+	.patch([authenticateUser, authorizePermissions("user", "admin")], updateProductRequest)
+	.delete([authenticateUser, authorizePermissions("user", "admin")], deleteProductRequest);
 
 router
 	.route("/:productRequestId/reply")
 	.post([authenticateUser, authorizePermissions("user", "admin")], postComment);
+router
+	.route("/:productRequestId/setupvote")
+	.post([authenticateUser, authorizePermissions("user", "admin")], setUpvote);
 
+// Unique comment
 router
 	.route("/:productRequestId/:commentId")
 	.patch([authenticateUser, authorizePermissions("user", "admin")], updateComment)

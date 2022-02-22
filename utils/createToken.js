@@ -5,6 +5,7 @@ const createToken = (user) => {
 		username: user.username,
 		userId: user._id,
 		role: user.role,
+		image: user.image,
 	};
 };
 

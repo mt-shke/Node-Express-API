@@ -25,7 +25,6 @@ const NotFoundMiddleware = require("./middleware/not-found");
 const ErrorHandlerMiddleware = require("./middleware/error-handler");
 
 // app.use
-
 app.use(
 	rateLimiter({
 		windowMs: 15 * 60 * 1000,
@@ -34,7 +33,7 @@ app.use(
 );
 app.use(helmet());
 app.use(xss());
-app.use(cors());
+app.use(cors({ origin: "http://localhost:3000", credentials: true }));
 app.use(mongoSanitize());
 
 app.use(express.json());

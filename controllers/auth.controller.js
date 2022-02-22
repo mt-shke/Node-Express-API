@@ -3,7 +3,6 @@ const CustomError = require("../errors");
 const UserModel = require("../models/user.model");
 const {
 	sendUserVerificationEmail,
-	isTokenValid,
 	attachCookiesToResponse,
 	createToken,
 	removeCookies,
@@ -38,7 +37,9 @@ const register = async (req, res) => {
 		email: newUser.email,
 		verificationToken: newUser.verificationToken,
 	});
-	res.status(StatusCodes.CREATED).json({ message: "Account created successfully!", verificationToken });
+	res
+		.status(StatusCodes.CREATED)
+		.json({ succes: true, message: "Account created successfully!", verificationToken });
 };
 
 // Verifiy Email account
@@ -58,7 +59,7 @@ const verifyEmail = async (req, res) => {
 	user.verified = new Date(Date.now());
 	user.save();
 
-	res.status(StatusCodes.OK).json({ message: "Account verified successfully! " });
+	res.status(StatusCodes.OK).json({ message: "Email verified successfully! ", success: true });
 };
 
 // Login function
@@ -98,7 +99,7 @@ const login = async (req, res) => {
 
 		refreshToken = existingToken.refreshToken;
 		attachCookiesToResponse({ res, user: tokenUser, refreshToken });
-		res.status(StatusCodes.OK).json({ user: tokenUser });
+		res.status(StatusCodes.OK).json({ user: tokenUser, success: true, message: "User now logged in" });
 		return;
 	}
 
@@ -110,7 +111,7 @@ const login = async (req, res) => {
 
 	await TokenModel.create(userToken);
 	attachCookiesToResponse({ res, user: tokenUser, refreshToken });
-	res.status(StatusCodes.OK).json({ user: tokenUser });
+	res.status(StatusCodes.OK).json({ user: tokenUser, success: true, message: "User now logged in" });
 };
 
 // Logout function
@@ -120,4 +121,12 @@ const logout = async (req, res) => {
 	res.status(StatusCodes.OK).json({ message: "User now logged out!" });
 };
 
-module.exports = { register, login, verifyEmail, logout };
+const verifyUserCookie = async (req, res) => {
+	const { userId, email } = req.user;
+	if (!userId || !email) {
+		throw new CustomError.UnauthenticatedError("No user, or cookies invalids");
+	}
+	res.status(StatusCodes.OK).json({ user: req.user, success: true, message: "User cookie verified" });
+};
+
+module.exports = { register, login, verifyEmail, logout, verifyUserCookie };

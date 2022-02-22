@@ -3,27 +3,48 @@ const CustomError = require("../errors");
 const ProductRequestModel = require("../models/productRequest.model");
 
 const getAllProductRequests = async (req, res) => {
-	const requests = await ProductRequestModel.find({});
+	const requests = await ProductRequestModel.find({}).populate([
+		{
+			path: "comments",
+			model: "Comment",
+			populate: {
+				path: "user",
+				model: "User",
+				select: ["_id", "email", "fullname", "username", "image"],
+			},
+		},
+	]);
 	res.status(StatusCodes.OK).json({ requests });
 };
 
 const createProductRequest = async (req, res) => {
-	const { category, title, status, description } = req.body;
+	const { category, title, description } = req.body;
 	const user = req.user.userId;
-	if (!title || !category || !description || !status) {
+	if (!title || !category || !description) {
 		throw new CustomError.BadRequestError("A field is missing");
 	}
 	if (!user) {
 		throw new CustomError.UnauthenticatedError("Something wrong happened, please try again later");
 	}
-	const request = await ProductRequestModel.create({ category, title, status, description, user });
+	const request = await ProductRequestModel.create({ category, title, description, user });
 
 	res.status(StatusCodes.CREATED).json({ success: true, message: "Product request created!", request });
 };
 
 const getSingleProductRequest = async (req, res) => {
-	const { id: requestId } = req.params;
-	const request = await ProductRequestModel.findOne({ _id: requestId });
+	const { productRequestId } = req.params;
+	const request = await ProductRequestModel.findOne({ _id: productRequestId }).populate([
+		{
+			path: "comments",
+			model: "Comment",
+			populate: {
+				path: "user",
+				model: "User",
+				select: ["_id", "email", "fullname", "username", "image"],
+			},
+		},
+	]);
+
 	if (!request) {
 		throw new CustomError.BadRequestError("Product request not found");
 	}
@@ -31,25 +52,24 @@ const getSingleProductRequest = async (req, res) => {
 };
 
 const updateProductRequest = async (req, res) => {
-	const { id: requestId } = req.params;
+	const { productRequestId } = req.params;
 	const { category, title, status, description } = req.body;
-	const request = await ProductRequestModel.findOne({ _id: requestId });
+	const request = await ProductRequestModel.findOneAndUpdate(
+		{ _id: productRequestId },
+		{ category: category, title: title, status: status ? status : this.status, description: description },
+		{ new: true }
+	);
 	if (!request) {
 		throw new CustomError.BadRequestError("Product request not found");
 	}
-	request.category = category;
-	request.title = title;
-	request.status = status;
-	request.description = description;
-	request.save();
 
-	res.status(StatusCodes.OK).json({ succes: true, message: "Updated!" });
+	res.status(StatusCodes.OK).json({ succes: true, message: "Updated!", request: request });
 };
 
 const deleteProductRequest = async (req, res) => {
-	const requestId = req.params.id;
+	const { productRequestId } = req.params;
 	const userId = req.user.userId;
-	const request = await ProductRequestModel.findOne({ _id: requestId });
+	const request = await ProductRequestModel.findOne({ _id: productRequestId });
 	if (!request) {
 		throw new CustomError.BadRequestError("Product request not found");
 	}
@@ -63,6 +83,28 @@ const deleteProductRequest = async (req, res) => {
 	throw new CustomError.UnauthorizedError("You are not authorized");
 };
 
+const setUpvote = async (req, res) => {
+	const { productRequestId } = req.params;
+	const { userId } = req.user;
+	const request = await ProductRequestModel.findOne({ _id: productRequestId });
+	if (!request) {
+		throw new CustomError.BadRequestError("Product request not found");
+	}
+
+	const userAlreadyVoted = request.upvoters.find((user) => user.toString() === userId.toString());
+	if (userAlreadyVoted) {
+		const filtered = request.upvoters.filter((user) => user.toString() !== userId.toString());
+		request.upvoters = filtered;
+	}
+	if (!userAlreadyVoted) {
+		request.upvoters = [...request.upvoters, userId];
+	}
+	request.save();
+	res
+		.status(StatusCodes.OK)
+		.json({ succes: true, message: "Set upvote success", upvoters: request.upvoters });
+};
+
 // Dummy db
 const createMultipleDummyRequests = async (req, res) => {
 	const admin = req.user.role;
@@ -72,12 +114,13 @@ const createMultipleDummyRequests = async (req, res) => {
 
 	const requestsPromise = req.body.map(async (request) => {
 		return await ProductRequestModel.create({
-			category: request.category,
-			title: request.title,
-			upvotes: request.upvotes,
-			status: request.status,
-			description: request.description,
 			user: req.user.userId,
+			title: request.title,
+			category: request.category,
+			description: request.description,
+			status: request.status,
+			numberOfUpvotes: request.numberOfUpvotes,
+			comments: request.comments,
 		});
 	});
 
@@ -93,4 +136,5 @@ module.exports = {
 	updateProductRequest,
 	deleteProductRequest,
 	createMultipleDummyRequests,
+	setUpvote,
 };

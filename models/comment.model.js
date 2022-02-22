@@ -1,3 +1,4 @@
+const CustomError = require("../errors");
 const mongoose = require("mongoose");
 
 const CommentSchema = new mongoose.Schema(
@@ -28,9 +29,31 @@ const CommentSchema = new mongoose.Schema(
 	{ timestamps: true }
 );
 
-// ProductRequestSchema.post("remove", async function (next) {
-// 	await this.model("Comment").deleteMany({ comments: this._id }, next);
-// });
+CommentSchema.pre("save", async function (next) {
+	try {
+		if (this.comment) {
+			await this.model("Comment")
+				.findOneAndUpdate({ _id: this.comment }, { $addToSet: { comments: this._id } }, next)
+				.clone();
+		}
+
+		await this.model("ProductRequest")
+			.findOneAndUpdate({ _id: this.productRequest }, { $addToSet: { comments: this._id } }, next)
+			.clone();
+	} catch (error) {
+		throw new CustomError.BadRequestError("Error while saving comments");
+	}
+});
+
+CommentSchema.pre("remove", async function (next) {
+	try {
+		await this.model("ProductRequest")
+			.findOneAndUpdate({ _id: this.productRequest }, { $pull: { comments: this._id } }, next)
+			.clone();
+	} catch (error) {
+		throw new CustomError.BadRequestError("Error while removing comments");
+	}
+});
 
 const CommentModel = new mongoose.model("Comment", CommentSchema);
 

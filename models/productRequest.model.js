@@ -1,3 +1,5 @@
+const CustomError = require("../errors");
+
 const mongoose = require("mongoose");
 
 const ProductRequestSchema = new mongoose.Schema(
@@ -23,38 +25,42 @@ const ProductRequestSchema = new mongoose.Schema(
 			type: String,
 			enum: ["Suggestion", "Planned", "In-Progress", "Live"],
 			required: [true, "Please provid a status"],
+			default: "Suggestion",
 		},
 		user: {
 			type: mongoose.Types.ObjectId,
 			ref: "User",
 			required: true,
 		},
-		upvotes: {
-			type: Number,
-			default: 0,
-		},
 		upvoters: {
 			type: [mongoose.Types.ObjectId],
 			ref: "User",
-			required: false,
+			required: true,
+			default: [],
+		},
+		numberOfUpvotes: {
+			type: Number,
+			required: true,
+			default: 0,
+		},
+		comments: {
+			type: [mongoose.Types.ObjectId],
+			ref: "Comment",
+			required: true,
+			default: [],
 		},
 	},
 	{ timestamps: true }
 );
 
 ProductRequestSchema.pre("remove", async function (next) {
-	await this.model("Comment").deleteMany({ productRequest: this._id }, next);
+	try {
+		await this.model("Comment").deleteMany({ productRequest: this._id }, next).clone();
+	} catch (error) {
+		throw new CustomError.BadRequestError("Error deleting comment from product request");
+	}
 });
 
 const ProductRequestModel = new mongoose.model("ProductRequest", ProductRequestSchema);
 
 module.exports = ProductRequestModel;
-
-// // Calc when these methods are called
-// ReviewSchema.post("save", async function () {
-// 	await this.constructor.calculateAverageRating(this.product);
-// });
-
-// ReviewSchema.post("remove", async function () {
-// 	await this.constructor.calculateAverageRating(this.product);
-// });
