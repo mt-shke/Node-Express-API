@@ -100,9 +100,7 @@ const setUpvote = async (req, res) => {
 		request.upvoters = [...request.upvoters, userId];
 	}
 	request.save();
-	res
-		.status(StatusCodes.OK)
-		.json({ succes: true, message: "Set upvote success", upvoters: request.upvoters });
+	res.status(StatusCodes.OK).json({ succes: true, message: "Set upvote success", upvote: request.upvoters });
 };
 
 // Dummy db

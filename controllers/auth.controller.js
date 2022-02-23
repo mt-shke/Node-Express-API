@@ -12,8 +12,8 @@ const TokenModel = require("../models/token.model");
 
 // Register new account
 const register = async (req, res) => {
-	const { email, password, fullname, username, image } = req.body;
-	if (!email || !password || !fullname || !username) {
+	const { email, password, username } = req.body;
+	if (!email || !password || !username) {
 		throw new CustomError.BadRequestError("Requiered fields missing");
 	}
 	const user = await UserModel.findOne({ email });
@@ -21,25 +21,27 @@ const register = async (req, res) => {
 		throw new CustomError.BadRequestError("This email is already in use");
 	}
 
-	const isFirstAccount = (await UserModel.countDocuments({})) === 0;
+	// const isFirstAccount = (await UserModel.countDocuments({})) === 0;
 
 	const verificationToken = crypto.randomBytes(50).toString("hex");
 	const newUser = await UserModel.create({
 		email,
 		password,
-		fullname,
 		username,
-		image,
-		verificationToken,
-		role: isFirstAccount ? "admin" : "user",
+		// role: isFirstAccount ? "admin" : "user",
 	});
-	await sendUserVerificationEmail({
-		email: newUser.email,
-		verificationToken: newUser.verificationToken,
-	});
-	res
-		.status(StatusCodes.CREATED)
-		.json({ succes: true, message: "Account created successfully!", verificationToken });
+
+	if (newUser) {
+		await sendUserVerificationEmail({
+			email: newUser.email,
+			verificationToken: newUser.verificationToken,
+		});
+		res
+			.status(StatusCodes.CREATED)
+			.json({ succes: true, message: "Account created successfully!", verificationToken });
+	} else {
+		throw new CustomError.BadRequestError("Account creation impossible");
+	}
 };
 
 // Verifiy Email account

@@ -5,7 +5,6 @@ const ErrorHandlerMiddleware = (err, req, res, next) => {
 		statusCodes: err.statusCode || StatusCodes.INTERNAL_SERVER_ERROR,
 		errorMessage: err.message || "Error handler: something went wrong",
 	};
-
 	// Custom code && error
 
 	if (err.code && err.code === 11000) {
@@ -15,7 +14,7 @@ const ErrorHandlerMiddleware = (err, req, res, next) => {
 		customError.statusCode = 400;
 	}
 
-	res.status(customError.statusCodes).json({ success: false, errorMessage: customError.errorMessage });
+	return res.status(customError.statusCodes).json({ success: false, errorMessage: customError.errorMessage });
 };
 
 module.exports = ErrorHandlerMiddleware;

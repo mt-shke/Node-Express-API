@@ -20,7 +20,7 @@ const UserSchema = new mongoose.Schema(
 		},
 		fullname: {
 			type: String,
-			required: [true, "Please enter your fullname"],
+			required: false,
 			minlength: 1,
 			maxlength: 30,
 		},
@@ -28,7 +28,7 @@ const UserSchema = new mongoose.Schema(
 			type: String,
 			required: [true, "Please enter a valid username"],
 			minlength: 6,
-			maxlength: 20,
+			maxlength: 30,
 			unique: [true, "This username is already registered"],
 		},
 		image: {
