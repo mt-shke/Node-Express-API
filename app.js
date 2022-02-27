@@ -33,7 +33,7 @@ app.use(
 );
 app.use(helmet());
 app.use(xss());
-app.use(cors({ origin: "http://localhost:3000", credentials: true }));
+app.use(cors({ origin: "https://fm-pfeedback.netlify.app/", credentials: true }));
 app.use(mongoSanitize());
 
 app.use(express.json());

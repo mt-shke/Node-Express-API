@@ -60,7 +60,6 @@ const verifyEmail = async (req, res) => {
 	user.isVerified = true;
 	user.verified = new Date(Date.now());
 	user.save();
-
 	res.status(StatusCodes.OK).json({ message: "Email verified successfully! ", success: true });
 };
 
